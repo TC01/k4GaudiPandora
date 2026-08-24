@@ -94,25 +94,12 @@ StatusCode DDSimpleMuonDigi::initialize() {
   }
 
   const auto collName = inputLocations("MUONCollection")[0];
-  debug() << "Determining the cellID encoding for collection: " << collName << endmsg;
-  std::string encodingString;
-  if (const auto maybeEncoding = k4FWCore::getCellIDEncoding(collName, this)) {
-    encodingString = maybeEncoding.value();
-  } else {
-    // Collections that are only created at runtime, for example when overlaying background, do not
-    // have their cellID encoding available in the metadata, so fall back to the DD4hep constant
-    debug() << "No cellID encoding in the metadata for collection " << collName << ", falling back to the DD4hep "
-            << "constant " << m_encodingStringVariable.value() << endmsg;
-    try {
-      encodingString = m_geoSvc->constantAsString(m_encodingStringVariable.value());
-    } catch (const std::exception& e) {
-      error() << "Unable to determine the cellID encoding for collection " << collName
-              << ": it is neither in the metadata nor available as the DD4hep constant "
-              << m_encodingStringVariable.value() << " (" << e.what() << ")" << endmsg;
-      return StatusCode::FAILURE;
-    }
+  const auto encodingString = k4FWCore::getCellIDEncoding(collName, this);
+  if (!encodingString) {
+    error() << "Encoding string not found for collection: " << collName << endmsg;
+    return StatusCode::FAILURE;
   }
-  m_bitFieldCoder = dd4hep::DDSegmentation::BitFieldCoder(encodingString);
+  m_bitFieldCoder = dd4hep::DDSegmentation::BitFieldCoder(encodingString.value());
 
   return StatusCode::SUCCESS;
 }
